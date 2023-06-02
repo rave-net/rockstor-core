@@ -19,6 +19,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from base_console import BaseConsole
 from rest_util import api_error, api_call
+from subprocess import check_output, CalledProcessError
 
 
 class NetworkConsole(BaseConsole):
@@ -78,3 +79,73 @@ class NetworkConsole(BaseConsole):
             print(api_call(url, data=input_data, calltype="put"))
         else:
             return self.do_help(args)
+    @api_error
+    def do_vlan_create(self, args):
+        """
+        Creates a new VLAN.
+        vlan_create <vlan-name> <base-interface> <vlan-id>
+        """
+        fields = args.split()
+        if len(fields) != 3:
+            return self.do_help('vlan_create')
+
+        vlan_name = fields[0]
+        base_interface = fields[1]
+        vlan_id = fields[2]
+
+        cmd = ['nmcli', 'con', 'add', 'type', 'vlan', 'con-name', vlan_name, 'dev', base_interface, 'id', vlan_id]
+        
+        try:
+            output = check_output(cmd)
+            print('VLAN created successfully')
+        except CalledProcessError as e:
+            print(f'Failed to create VLAN: {e}')
+
+    @api_error
+    def do_vlan_delete(self, args):
+        """
+        Deletes an existing VLAN.
+        vlan_delete <vlan-name>
+        """        
+        fields = args.split()
+        if len(fields) != 1:
+            return self.do_help('vlan_delete')
+
+        vlan_name = fields[0]
+
+        cmd = ['nmcli', 'con', 'delete', vlan_name]
+
+        try:
+            output = check_output(cmd)
+            print('VLAN deleted successfully')
+        except CalledProcessError as e:
+            print(f'Failed to delete VLAN: {e}')
+
+    @api_error
+    def do_vlan_config(self, args):
+        """
+        Configures the IP address, netmask, and gateway for a VLAN.
+        vlan_config <vlan-name> <ip-address>/<netmask> <gateway>
+        """
+        fields = args.split()
+        if len(fields) != 3:
+            return self.do_help('vlan_config')
+
+        vlan_name = fields[0]
+        ip_netmask = fields[1]
+        gateway = fields[2]
+
+        cmd = ['nmcli', 'con', 'mod', vlan_name, 'ipv4.addresses', ip_netmask, 'ipv4.gateway', gateway, 'ipv4.method', 'manual']
+
+        try:
+            output = check_output(cmd)
+            print('VLAN configured successfully')
+        except CalledProcessError as e:
+            print(f'Failed to configure VLAN: {e}')
+
+        cmd = ['nmcli', 'con', 'up', vlan_name]
+
+        try:
+            output = check_output(cmd)
+            print('VLAN activated successfully')   
+        
